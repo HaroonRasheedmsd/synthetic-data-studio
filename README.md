@@ -11,7 +11,7 @@
 In modern software development and testing, relying on real production databases exposes companies to massive **PII (Personally Identifiable Information) leakage risks** and compliance violations (GDPR/HIPAA). Conversely, relying on simple fake data scripts results in flat, unrealistic datasets that fail to stress-test complex relational joins or edge cases.
 
 ## 💡 The Solution
-**Synthetic Data Studio** is a privacy-safe, AI-powered generation platform. You describe your business domain in plain English (or upload a sample CSV), and our platform orchestrates a **Modular 3-Engine Architecture** to synthesize millions of mathematically perfect, realistic records.
+**Synthetic Data Studio** is a privacy-safe, AI-powered generation platform. You describe your business domain in plain English (or upload a sample CSV), and our platform orchestrates a **Modular 3-Engine Architecture** to synthesize millions of constraint-aware synthetic, realistic records.
 
 ---
 

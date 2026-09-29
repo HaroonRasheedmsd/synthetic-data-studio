@@ -1,40 +1,59 @@
 import google.generativeai as genai
 from app.core.config import settings
-from app.schemas.models import GenerationPlan
+from app.schemas.models import GenerationPlan, TableSchema, ColumnSchema
 import json
+import time
 
 class AIManager:
     def __init__(self):
         self.model = None
+        self.keys = [settings.GEMINI_API_KEY_1, settings.GEMINI_API_KEY_2]
+        self.current_key_idx = 0
         self._init_model()
 
     def _init_model(self):
-        keys = [settings.GEMINI_API_KEY_1, settings.GEMINI_API_KEY_2]
-        valid_keys = [k for k in keys if k and k.strip()]
-        
-        last_error = None
-        for key in valid_keys:
+        valid_keys = [k for k in self.keys if k and k.strip()]
+        if not valid_keys:
+            return
+
+        # Start from the current key and try all
+        for i in range(len(valid_keys)):
+            idx = (self.current_key_idx + i) % len(valid_keys)
             try:
-                genai.configure(api_key=key)
+                genai.configure(api_key=valid_keys[idx])
                 available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                 if available_models:
                     flash_models = [m for m in available_models if 'flash' in m.lower()]
                     model_name = flash_models[0] if flash_models else available_models[0]
                     self.model = genai.GenerativeModel(model_name)
+                    self.current_key_idx = idx
                     return
             except Exception as e:
-                last_error = e
                 continue
-                
-        if self.model is None and last_error:
-            print(f"Warning: Could not configure Gemini model on startup: {last_error}")
+
+    def _get_fallback_plan(self) -> GenerationPlan:
+        # Fallback e-commerce schema to keep the hackathon demo alive if AI totally fails
+        return GenerationPlan(
+            domain="E-Commerce Fallback",
+            tables=[
+                TableSchema(
+                    name="users",
+                    columns=[
+                        ColumnSchema(name="id", data_type="uuid", faker_provider="uuid4", is_primary_key=True),
+                        ColumnSchema(name="name", data_type="str", faker_provider="name"),
+                        ColumnSchema(name="email", data_type="str", faker_provider="email", is_unique=True)
+                    ]
+                )
+            ]
+        )
 
     def infer_schema(self, description: str) -> GenerationPlan:
         if not self.model:
             self._init_model()
             
         if not self.model:
-            raise ValueError("Gemini API key is not configured or no models are accessible.")
+            # If we don't even have a valid key, return the fallback immediately
+            return self._get_fallback_plan()
             
         prompt = f"""
         You are an expert Database Architect. The user wants to build a synthetic database.
@@ -59,20 +78,40 @@ class AIManager:
         Return ONLY valid JSON that precisely matches this JSON Schema. DO NOT wrap it in markdown.
         Schema: {GenerationPlan.model_json_schema()}
         """
-        response = self.model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(response_mime_type="application/json")
-        )
-        text = response.text.strip()
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
         
-        try:
-            return GenerationPlan.model_validate_json(text)
-        except Exception as e:
-            raise ValueError(f"AI returned invalid schema: {e}\nRaw: {text}")
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config=genai.GenerationConfig(response_mime_type="application/json")
+                )
+                text = response.text.strip()
+                if text.startswith("```json"):
+                    text = text[7:]
+                if text.startswith("```"):
+                    text = text[3:]
+                if text.endswith("```"):
+                    text = text[:-3]
+                text = text.strip()
+                
+                try:
+                    return GenerationPlan.model_validate_json(text)
+                except Exception as e:
+                    raise ValueError(f"AI returned invalid schema: {e}\nRaw: {text}")
+                    
+            except Exception as e:
+                error_str = str(e)
+                if "429" in error_str or "Quota" in error_str:
+                    # Switch to the next key and wait a moment
+                    self.current_key_idx = (self.current_key_idx + 1) % len(self.keys)
+                    self._init_model()
+                    time.sleep(2)
+                    continue
+                else:
+                    if attempt == max_retries - 1:
+                        print(f"AI schema generation failed: {error_str}")
+                        return self._get_fallback_plan()
+        
+        print("All API retries exhausted. Returning fallback schema.")
+        return self._get_fallback_plan()

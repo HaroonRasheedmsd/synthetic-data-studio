@@ -19,6 +19,7 @@ build/
 backend/exports/
 backend/data_preview/
 *.sqlite3
+*.db
 
 # IDEs
 .vscode/
