@@ -1,0 +1,26 @@
+# Environments
+.env
+.env.local
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+build/
+
+# Output Data
+backend/exports/
+backend/data_preview/
+*.sqlite3
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
