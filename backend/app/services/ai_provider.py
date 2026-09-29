@@ -15,7 +15,18 @@ class AIManager:
             raise ValueError("GEMINI_API_KEY_1 is missing in your .env file.")
         
         genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-pro')
+        
+        # Dynamically fetch the best available model for this API key to future-proof it
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        
+        if not available_models:
+            raise ValueError("No generation models are enabled for your API key.")
+            
+        # Try to find a fast 'flash' model, otherwise use the very first available one
+        flash_models = [m for m in available_models if 'flash' in m.lower()]
+        model_name = flash_models[0] if flash_models else available_models[0]
+        
+        self.model = genai.GenerativeModel(model_name)
 
     def infer_schema(self, description: str) -> DatabaseSchema:
         prompt = f"""
