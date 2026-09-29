@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+sqlalchemy
+duckdb
+pandas
+faker
+python-dotenv
+google-generativeai
