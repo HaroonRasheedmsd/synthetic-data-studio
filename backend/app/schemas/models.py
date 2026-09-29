@@ -1,29 +1,63 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Dict, Any, Optional
 
 class ColumnSchema(BaseModel):
-    name: str = Field(..., description="Name of the column")
-    data_type: str = Field(..., description="Data type (e.g., integer, string, boolean, date)")
-    is_primary_key: bool = Field(default=False)
-    is_foreign_key: bool = Field(default=False)
-    references_table: Optional[str] = Field(default=None, description="If foreign key, the table it references")
-    references_column: Optional[str] = Field(default=None, description="If foreign key, the column it references")
-    faker_provider: str = Field(..., description="The Faker provider to use for generation (e.g., 'name', 'email', 'random_int')")
+    name: str
+    data_type: str
+    is_primary_key: bool = False
+    is_foreign_key: bool = False
+    references_table: Optional[str] = None
+    references_column: Optional[str] = None
+    faker_provider: str = "word"
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
 
 class TableSchema(BaseModel):
-    name: str = Field(..., description="Name of the table")
+    name: str
     columns: List[ColumnSchema]
-    row_count: int = Field(default=100, description="Default number of rows to generate")
+    row_count: int = 100
 
-class DatabaseSchema(BaseModel):
+class ScenarioConfig(BaseModel):
+    missing_value_rate: float = 0.0
+    outlier_rate: float = 0.0
+    duplicate_rate: float = 0.0
+
+class Constraint(BaseModel):
+    table: str
+    rule: str
+    description: str
+
+class GenerationPlan(BaseModel):
+    project_name: str = "Synthetic Data Studio"
+    locale: str = "en_US"
+    currency: str = "USD"
     tables: List[TableSchema]
+    scenarios: ScenarioConfig = ScenarioConfig()
+    constraints: List[Constraint] = []
 
 class InferenceRequest(BaseModel):
-    description: str = Field(..., description="Natural language description of the data to generate")
+    description: str = Field(..., description="Natural language description")
+
+class ValidationIssue(BaseModel):
+    table: str
+    issue_type: str
+    description: str
+
+class QualityReport(BaseModel):
+    total_rows: int
+    referential_integrity_passed: bool
+    missing_value_rate: float
+    issues: List[ValidationIssue]
+
+class PrivacyReport(BaseModel):
+    exact_duplicates: int
+    identifier_leakage_risk: str
 
 class GenerateRequest(BaseModel):
-    schema_def: DatabaseSchema = Field(..., description="The schema to generate data for")
+    plan: GenerationPlan
 
 class GenerateResponse(BaseModel):
-    data: dict = Field(..., description="A dictionary of table names to lists of rows")
-    message: str = "Data generated successfully"
+    data: Dict[str, List[Dict[str, Any]]]
+    quality_report: QualityReport
+    privacy_report: PrivacyReport
+    message: str = "Generated successfully"

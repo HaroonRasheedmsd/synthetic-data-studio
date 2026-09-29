@@ -30,3 +30,5 @@ def get_settings():
     @lru_cache ensures we only read the .env file once and cache the result for performance.
     """
     return Settings()
+
+settings = get_settings()
