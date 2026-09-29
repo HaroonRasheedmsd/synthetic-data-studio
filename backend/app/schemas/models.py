@@ -20,3 +20,10 @@ class DatabaseSchema(BaseModel):
 
 class InferenceRequest(BaseModel):
     description: str = Field(..., description="Natural language description of the data to generate")
+
+class GenerateRequest(BaseModel):
+    schema_def: DatabaseSchema = Field(..., description="The schema to generate data for")
+
+class GenerateResponse(BaseModel):
+    data: dict = Field(..., description="A dictionary of table names to lists of rows")
+    message: str = "Data generated successfully"
