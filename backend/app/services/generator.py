@@ -10,20 +10,32 @@ PROVIDER_MAP = {
     "integer": "random_int",
     "number": "random_int",
     "float": "pyfloat",
+    "decimal": "pyfloat",
+    "double": "pyfloat",
     "string": "word",
     "str": "word",
     "text": "text",
     "uuid": "short_id",
     "uuid4": "short_id",
+    "short_id": "short_id",
     "boolean": "boolean",
     "bool": "boolean",
     "date": "date",
     "datetime": "date_time",
     "email": "email",
     "name": "name",
+    "full_name": "name",
     "first_name": "first_name",
     "last_name": "last_name",
+    "phone": "phone_number",
+    "phone_number": "phone_number",
     "address": "address",
+    "city": "city",
+    "country": "country",
+    "company": "company",
+    "job": "job",
+    "url": "url",
+    "ipv4": "ipv4",
     "iban": "iban",
 }
 
@@ -49,7 +61,7 @@ class DataGenerator:
         for table in tables:
             for col in table.columns:
                 if col.is_foreign_key and col.references_table and col.references_table in table_map:
-                    if col.references_table != table.name: # avoid self-reference loop
+                    if col.references_table != table.name:
                         dependencies[table.name].add(col.references_table)
 
         sorted_tables = []
@@ -73,11 +85,17 @@ class DataGenerator:
         for c in parent_table_schema.columns:
             if c.is_primary_key:
                 return c.name
-        # Fallback to column ending with '_id' or 'id' or first column
         for c in parent_table_schema.columns:
             if c.name.endswith("_id") or c.name == "id":
                 return c.name
         return parent_table_schema.columns[0].name if parent_table_schema.columns else "id"
+
+    def _get_table_prefix(self, table_name: str) -> str:
+        """Generate a unique uppercase prefix for table primary key short IDs."""
+        words = table_name.replace("-", "_").split("_")
+        if len(words) >= 2:
+            return "".join(w[0] for w in words if w).upper()[:4]
+        return table_name[:3].upper()
 
     def generate_world(self, plan: GenerationPlan):
         fake = self._get_faker(plan.locale)
@@ -90,16 +108,14 @@ class DataGenerator:
 
         for table in sorted_tables:
             rows = []
-            pk_col = next((c for c in table.columns if c.is_primary_key), None)
+            prefix = self._get_table_prefix(table.name)
             
             for row_idx in range(1, table.row_count + 1):
                 row = {}
                 for col in table.columns:
                     # Case 1: Primary Key Column
                     if col.is_primary_key:
-                        # If string type or custom name like patient_id, acct_num, generate short clean formatted ID
-                        if col.data_type and "str" in col.data_type.lower() or col.faker_provider in ["uuid", "uuid4", "iban"]:
-                            prefix = table.name[:3].upper()
+                        if col.data_type and "str" in col.data_type.lower() or col.faker_provider in ["uuid", "uuid4", "short_id", "iban"]:
                             row[col.name] = f"{prefix}-{row_idx + 100}"
                         else:
                             row[col.name] = row_idx + 100
@@ -111,7 +127,6 @@ class DataGenerator:
                             parent_rows = database_data[ref_table]
                             random_parent = random.choice(parent_rows)
                             
-                            # Determine exact target PK column name in parent
                             parent_schema = table_schema_map.get(ref_table)
                             target_ref_col = col.references_column
                             if not target_ref_col and parent_schema:
@@ -121,19 +136,17 @@ class DataGenerator:
                             if target_ref_col and target_ref_col in random_parent:
                                 val = random_parent[target_ref_col]
                             else:
-                                # Fallback to any valid key in random_parent
                                 val = list(random_parent.values())[0] if random_parent else 101
 
                             row[col.name] = val
                         else:
-                            # Parent table not available
-                            prefix = ref_table[:3].upper()
-                            row[col.name] = f"{prefix}-101"
+                            ref_prefix = self._get_table_prefix(ref_table)
+                            row[col.name] = f"{ref_prefix}-101"
                             
                     # Case 3: Regular Attribute Field
                     else:
                         if col.faker_provider in ["uuid", "uuid4", "short_id"] or col.name.lower() in ["id", "uuid"]:
-                            row[col.name] = row_idx + 100
+                            row[col.name] = f"{prefix}-{row_idx + 100}"
                             continue
 
                         try:
@@ -144,7 +157,7 @@ class DataGenerator:
                                 provider_name = PROVIDER_MAP[col.data_type.lower()]
 
                             if provider_name == "short_id":
-                                val = row_idx + 100
+                                val = f"{prefix}-{row_idx + 100}"
                             else:
                                 faker_func = getattr(fake, provider_name, fake.word)
                                 val = faker_func()
@@ -184,13 +197,51 @@ class DataGenerator:
                     
             database_data[table.name] = df.replace({np.nan: None}).to_dict(orient="records")
 
+        # Post-Processing: Cross-Table Mathematical Reconciliation
+        # (e.g. order_items sums reconcile to orders.total_amount & payments.amount_paid)
+        for t_name, rows in database_data.items():
+            if "item" in t_name.lower() or "line" in t_name.lower():
+                fk_col = next((c.name for c in table_schema_map[t_name].columns if c.is_foreign_key and "order" in c.references_table.lower()), None) if t_name in table_schema_map else None
+                if fk_col:
+                    parent_t = table_schema_map[t_name].columns[0].references_table
+                    totals_by_parent = {}
+                    for r in rows:
+                        p_val = r.get(fk_col)
+                        price = float(r.get("unit_price") or r.get("price") or 15.0)
+                        qty = int(r.get("quantity") or r.get("qty") or 1)
+                        item_sum = round(price * qty, 2)
+                        r["item_total"] = item_sum
+                        if p_val:
+                            totals_by_parent[p_val] = totals_by_parent.get(p_val, 0.0) + item_sum
+                    
+                    if parent_t and parent_t in database_data:
+                        for p_row in database_data[parent_t]:
+                            p_pk = p_row.get("id") or list(p_row.values())[0]
+                            if p_pk in totals_by_parent:
+                                if "total_amount" in p_row:
+                                    p_row["total_amount"] = round(totals_by_parent[p_pk], 2)
+                                elif "total" in p_row:
+                                    p_row["total"] = round(totals_by_parent[p_pk], 2)
+
+            # Reconcile payments amount_paid with orders total_amount
+            if "payment" in t_name.lower():
+                fk_col = next((c.name for c in table_schema_map[t_name].columns if c.is_foreign_key and "order" in c.references_table.lower()), None) if t_name in table_schema_map else None
+                if fk_col and "orders" in database_data:
+                    order_totals = {r.get("id"): r.get("total_amount") or r.get("total") for r in database_data["orders"] if r.get("id")}
+                    for r in rows:
+                        ord_id = r.get(fk_col)
+                        if ord_id in order_totals and order_totals[ord_id] is not None:
+                            if "amount_paid" in r:
+                                r["amount_paid"] = round(float(order_totals[ord_id]), 2)
+                            elif "amount" in r:
+                                r["amount"] = round(float(order_totals[ord_id]), 2)
+
         # Validation Engine
         total_rows = sum(len(rows) for rows in database_data.values())
         missing_count = 0
         total_cells = 0
         orphan_fks = 0
         
-        # Build sets of all valid PKs for quick lookup
         valid_pks = {}
         for t_schema in plan.tables:
             pk_name = self._get_parent_pk_column_name(t_schema)
@@ -199,7 +250,6 @@ class DataGenerator:
                 if col.is_primary_key:
                     valid_pks[f"{t_schema.name}.{col.name}"] = set(r.get(col.name) for r in database_data.get(t_schema.name, []))
 
-        # Check FK integrity and missing values
         for t_schema in plan.tables:
             rows = database_data.get(t_schema.name, [])
             for r in rows:
@@ -257,7 +307,6 @@ class DataGenerator:
             issues=issues
         )
         
-        # Calculate exact duplicates
         exact_dups = 0
         for t_name, rows in database_data.items():
             if rows:
