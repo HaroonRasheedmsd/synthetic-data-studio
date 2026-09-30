@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Sparkles, Database, FileText, Sliders, ShieldCheck, Activity, Plus, ShoppingCart, Landmark, Stethoscope, GraduationCap, Clock } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PRESETS } from '../utils/presets';
+import { API_BASE_URL } from '../utils/api';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ export default function Home() {
           setLoading(false);
           return;
         }
-        const res = await fetch('http://127.0.0.1:8000/api/projects', {
+        const res = await fetch(`${API_BASE_URL}/api/projects`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {

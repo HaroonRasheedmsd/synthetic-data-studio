@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Bot, Loader2, ArrowRight, Upload, Globe, Sliders, X, CheckCircle2, ChevronRight, Settings, AlertTriangle, Database, Table as TableIcon, FileText, Sparkles, Layers, ShieldCheck, Zap } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PRESETS } from '../utils/presets';
+import { API_BASE_URL } from '../utils/api';
 
 const LOCALES = [
   { code: 'en_US', label: '🇺🇸 English (US)', currency: 'USD' },
@@ -85,7 +86,7 @@ export default function SchemaBuilder() {
     setLoading(true); setError(''); setSchema(null);
     setCurrentStep(0);
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/schema/infer', {
+      const response = await fetch(`${API_BASE_URL}/api/schema/infer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description: prompt }),
@@ -111,7 +112,7 @@ export default function SchemaBuilder() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const response = await fetch('http://127.0.0.1:8000/api/schema/infer-csv', {
+      const response = await fetch(`${API_BASE_URL}/api/schema/infer-csv`, {
         method: 'POST',
         body: formData,
       });

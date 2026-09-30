@@ -1,6 +1,7 @@
 import { Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { Database, Home as HomeIcon, FileText, Settings, ShieldCheck, Download, Table, Sparkles, Sliders, LogOut, User as UserIcon, Activity, Receipt, CreditCard, ChevronRight, Key, Layers, BookOpen } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from './utils/api';
 import Home from './pages/Home';
 import SchemaBuilder from './pages/SchemaBuilder';
 import DataPreview from './pages/DataPreview';
@@ -18,7 +19,7 @@ function App() {
 
   useEffect(() => {
     if (token) {
-      fetch('http://127.0.0.1:8000/api/auth/me', {
+      fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(res => {

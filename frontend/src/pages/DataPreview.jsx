@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Download, Loader2, ArrowLeft, Table as TableIcon, CheckCircle, ShieldCheck, CheckCircle2, ChevronRight, Check, FileText, Sliders, Eye, FileCheck, Landmark, Receipt, Sparkles, BookOpen, Layers, Zap } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import JSZip from 'jszip';
+import { API_BASE_URL } from '../utils/api';
 
 function WorkflowStepper({ currentStep, onStepClick }) {
   const steps = ['Describe', 'Plan', 'Configure', 'Generate', 'Validate'];
@@ -88,7 +89,7 @@ export default function DataPreview({ activeTab = "all" }) {
          return;
       }
 
-      const response = await fetch("http://127.0.0.1:8000/api/generate", {
+      const response = await fetch(`${API_BASE_URL}/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
@@ -105,7 +106,7 @@ export default function DataPreview({ activeTab = "all" }) {
 
       let docList = [];
       if (plan.engines && plan.engines.document) {
-          const invResponse = await fetch("http://127.0.0.1:8000/api/documents/invoices", {
+          const invResponse = await fetch(`${API_BASE_URL}/api/documents/invoices`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ plan }),
@@ -137,7 +138,7 @@ export default function DataPreview({ activeTab = "all" }) {
           const rowCount = Object.values(result.data).reduce((acc, rows) => acc + (rows?.length || 0), 0);
           const tableCount = Object.keys(result.data).length;
           
-          await fetch('http://127.0.0.1:8000/api/projects/', {
+          await fetch(`${API_BASE_URL}/api/projects/`, {
               method: 'POST',
               headers: { 
                   'Content-Type': 'application/json',

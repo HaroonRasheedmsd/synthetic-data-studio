@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Database, AlertTriangle, Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '../utils/api';
 
 export default function Signup({ setToken }) {
   const [fullName, setFullName] = useState('');
@@ -26,7 +27,7 @@ export default function Signup({ setToken }) {
     setError('');
     
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/auth/signup', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ full_name: fullName, email, password }),
