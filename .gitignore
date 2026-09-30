@@ -12,8 +12,7 @@ __pycache__/
 
 # Node
 node_modules/
-dist/
-build/
+frontend/dist/
 
 # Output Data
 backend/exports/
@@ -25,3 +24,6 @@ backend/data_preview/
 .vscode/
 .idea/
 .DS_Store
+
+# Scratch / temp
+scratch/

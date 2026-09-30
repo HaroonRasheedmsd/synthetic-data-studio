@@ -1,11 +1,11 @@
 import sys
 import os
-# This is the absolute ultimate fix for Python 3.14 on Windows.
-# We explicitly inject the 'backend' folder path into Python's brain before doing anything else.
+# Inject the 'backend' folder into sys.path so imports work in all environments
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, RedirectResponse
 from app.core.config import get_settings
 from app.api.routes import router as api_router
 from app.api.auth import router as auth_router
@@ -19,7 +19,8 @@ app = FastAPI(
     version="1.0.0"
 )
 
-raw_origins = [origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",") if origin.strip()]
+# ── CORS ──────────────────────────────────────────────────────────────────────
+raw_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
 raw_origins.extend([
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -39,30 +40,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from fastapi.responses import JSONResponse
-
-# Dual-prefix router registration for zero-friction serverless & local routing
-app.include_router(auth_router, prefix="/api/auth")
-app.include_router(auth_router, prefix="/auth")
-
+# ── API Routers ────────────────────────────────────────────────────────────────
+# Registered under both /api/* (standard) and /* (serverless fallback)
+app.include_router(auth_router,     prefix="/api/auth")
+app.include_router(auth_router,     prefix="/auth")
 app.include_router(projects_router, prefix="/api/projects")
 app.include_router(projects_router, prefix="/projects")
-
-app.include_router(api_router, prefix="/api")
+app.include_router(api_router,      prefix="/api")
 app.include_router(api_router)
 
+# ── Health ────────────────────────────────────────────────────────────────────
+@app.get("/health")
+def health_check():
+    return {"status": "online", "message": "Synthetic Data Studio API is running."}
+
+# ── 404 Handler ───────────────────────────────────────────────────────────────
+# NOTE: On Vercel, static files (index.html, CSS, JS) are served by the CDN,
+# NOT by this FastAPI app. This 404 handler should only ever fire for unknown
+# /api/* routes. If it fires for /index.html it means Vercel's CDN could not
+# find the built frontend — check that outputDirectory in vercel.json is correct
+# and that the frontend was built before deployment.
 @app.exception_handler(404)
 async def custom_404_handler(request, exc):
     path = request.url.path
-    print(f"404 ROUTE NOT FOUND: Method={request.method}, Path={path}")
+    is_vercel = os.environ.get("VERCEL") == "1"
+    print(f"404: {request.method} {path}")
+    if not is_vercel and path in ("/", "/index.html"):
+        # Local dev only — frontend not built yet, redirect to Vite dev server
+        return RedirectResponse(url="http://localhost:5173")
     return JSONResponse(
         status_code=404,
         content={"detail": f"Route not found: {request.method} {path}"}
     )
-
-@app.get("/health")
-def health_check():
-    return {
-        "status": "online", 
-        "message": "Synthetic Data Studio API is running beautifully."
-    }
