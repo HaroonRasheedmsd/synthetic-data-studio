@@ -100,14 +100,35 @@ def generate_invoices(request: GenerateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/query", response_model=QueryResponse)
+@router.post("/query/", response_model=QueryResponse)
 def execute_query(request: QueryRequest):
     """Execute SQL or natural language query against generated relational datasets in memory using DuckDB."""
     try:
+        if not request.data:
+            return QueryResponse(
+                sql_executed=request.query,
+                columns=[],
+                results=[],
+                row_count=0,
+                answer_summary="No dataset generated yet. Please generate synthetic data first before querying."
+            )
+
         conn = duckdb.connect(database=":memory:")
         for table_name, rows in request.data.items():
             if rows:
                 df = pd.DataFrame(rows)
-                conn.register(table_name, df)
+                # Register table under multiple casing & prefix/suffix aliases for zero-friction SQL querying
+                aliases = set([
+                    table_name,
+                    table_name.lower(),
+                    table_name.replace('flat_', '').replace('_dataset', ''),
+                    table_name.replace('flat_', '').replace('_dataset', '').lower()
+                ])
+                for alias in aliases:
+                    try:
+                        conn.register(alias, df)
+                    except Exception:
+                        pass
             else:
                 conn.execute(f"CREATE TABLE {table_name} (dummy INT)")
 
@@ -122,7 +143,8 @@ def execute_query(request: QueryRequest):
             lower_q = raw_query.lower()
             matched_table = first_table
             for t in tables_list:
-                if t.lower() in lower_q:
+                clean_t = t.replace('flat_', '').replace('_dataset', '')
+                if clean_t.lower() in lower_q or t.lower() in lower_q:
                     matched_table = t
                     break
             
@@ -153,7 +175,7 @@ def execute_query(request: QueryRequest):
             cols = [col[0] for col in rel.description] if rel.description else []
             fetched = rel.fetchall()
             results = [dict(zip(cols, row)) for row in fetched]
-            summary = f"Syntax note: Adjusted query to standard SQL. Showing {len(results)} rows from '{first_t}'."
+            summary = f"Query Execution Note: Executed fallback query on table '{first_t}'. (Details: {str(query_err)})"
             return QueryResponse(
                 sql_executed=sql_fallback,
                 columns=cols,
