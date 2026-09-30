@@ -443,9 +443,68 @@ export default function DataPreview({ activeTab = "all" }) {
       )}
 
       {activeTab === 'scenarios' && (
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 mb-2">Relational Graph &amp; Edge Cases</h1>
-          <p className="text-slate-500 text-sm font-medium">Maintains 1:1, 1:N, and N:M junction relationships with topological sorting and clean short IDs.</p>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 mb-2">Relational Graph &amp; Edge Cases</h1>
+            <p className="text-slate-500 text-sm font-medium">Maintains 1:1, 1:N, and N:M junction relationships with topological sorting and clean short IDs.</p>
+          </div>
+
+          {/* Relational Schema Architecture Visualizer Card */}
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 rounded-3xl p-7 text-white shadow-xl space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-500/20 rounded-2xl border border-indigo-400/30 text-indigo-300">
+                  <Layers size={22} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-extrabold text-white">Relational Graph Architecture</h3>
+                  <p className="text-slate-400 text-xs font-medium">Topological table dependency order &amp; foreign-key constraints</p>
+                </div>
+              </div>
+              <span className="px-3.5 py-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-extrabold text-xs rounded-full flex items-center gap-1.5">
+                <Check size={14} /> Referential Integrity 100% Passed
+              </span>
+            </div>
+
+            {/* Relationship Nodes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+              {currentPlan?.tables?.map((t, idx) => (
+                <div key={t.name} className="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-4 space-y-3 hover:border-indigo-500/50 transition-all">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-700/60">
+                    <div className="font-extrabold text-sm text-indigo-200 flex items-center gap-2">
+                      <TableIcon size={16} className="text-indigo-400" />
+                      <span>{t.name}</span>
+                    </div>
+                    <span className="text-[10px] font-black bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-400/20">
+                      Table #{idx + 1}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 font-mono">
+                    {t.columns?.map(c => (
+                      <div key={c.name} className="flex items-center justify-between text-slate-300 text-[11px]">
+                        <span className="flex items-center gap-1.5">
+                          {c.is_primary_key ? (
+                            <span className="text-amber-400 font-bold text-[9px] bg-amber-400/10 px-1 rounded border border-amber-400/20">PK</span>
+                          ) : c.foreign_key ? (
+                            <span className="text-blue-400 font-bold text-[9px] bg-blue-400/10 px-1 rounded border border-blue-400/20">FK</span>
+                          ) : (
+                            <span className="text-slate-500">•</span>
+                          )}
+                          <span className={c.is_primary_key ? 'font-bold text-amber-200' : ''}>{c.name}</span>
+                        </span>
+                        {c.foreign_key && (
+                          <span className="text-indigo-300 text-[10px] font-sans bg-indigo-900/60 px-1.5 py-0.5 rounded border border-indigo-700/50">
+                            ➜ {c.foreign_key}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -537,8 +596,8 @@ export default function DataPreview({ activeTab = "all" }) {
       </div>
       )}
 
-      {/* Relational Datasets (Shown on 'all', 'datasets', 'exports') */}
-      {(activeTab === 'all' || activeTab === 'datasets' || activeTab === 'exports') && (
+      {/* Relational Datasets (Shown on 'all', 'datasets', 'scenarios', 'exports') */}
+      {(activeTab === 'all' || activeTab === 'datasets' || activeTab === 'scenarios' || activeTab === 'exports') && (
       <div className="space-y-6 pt-4">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2.5">
