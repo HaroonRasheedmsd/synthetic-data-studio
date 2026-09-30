@@ -288,150 +288,152 @@ export default function SchemaBuilder() {
         )}
       </div>
 
-      {schema && (
-        <div className="animate-in space-y-6">
-          {/* Settings / Config Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            {/* 3-Engine Architecture Config */}
-            <div 
-                id="engine-config-panel" 
-                className={`bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col h-full ${
-                    validationError ? 'border-rose-500 ring-2 ring-rose-200' : ''
+      {/* Settings / Config Row - MOVED OUTSIDE SCHEMA TO BE VISIBLE IMMEDIATELY */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        {/* 3-Engine Architecture Config */}
+        <div 
+            id="engine-config-panel" 
+            className={`bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col h-full ${
+                validationError ? 'border-rose-500 ring-2 ring-rose-200' : ''
+            }`}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <Settings size={18} className={validationError ? "text-rose-500" : "text-slate-800"} />
+            <h2 className="font-extrabold text-slate-900 text-xs tracking-wide uppercase">Modular Architecture</h2>
+          </div>
+          <p className="text-xs text-slate-500 pb-3 border-b border-slate-100 mb-3 font-medium">Engage target generation engines.</p>
+          
+          <div className="space-y-2 flex-1">
+            {[
+              {
+                id: 'tabular',
+                title: 'Tabular Engine',
+                desc: 'Generates localized rows & clean short IDs.',
+                active: engineTabular,
+                setter: setEngineTabular,
+                icon: Database
+              },
+              {
+                id: 'relational',
+                title: 'Relational Engine',
+                desc: 'Maintains 1:1, 1:N, N:M parent PKs.',
+                active: engineRelational,
+                setter: setEngineRelational,
+                icon: TableIcon
+              },
+              {
+                id: 'document',
+                title: 'Document Engine',
+                desc: 'Compiles Invoices, Statements & History docs.',
+                active: engineDocument,
+                setter: setEngineDocument,
+                icon: FileText
+              }
+            ].map((mod) => (
+              <div 
+                key={mod.id}
+                onClick={() => { mod.setter(!mod.active); setCurrentStep(2); }}
+                className={`relative flex items-center gap-3 p-3 cursor-pointer transition-all rounded-2xl border ${
+                  mod.active 
+                    ? 'bg-blue-50/60 border-blue-200 shadow-sm' 
+                    : 'bg-transparent border-transparent hover:bg-slate-50'
                 }`}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <Settings size={18} className={validationError ? "text-rose-500" : "text-slate-800"} />
-                <h2 className="font-extrabold text-slate-900 text-xs tracking-wide uppercase">Modular Architecture</h2>
+              >
+                {mod.active && (
+                  <div className="absolute left-0 top-2 bottom-2 w-1.5 bg-blue-600 rounded-r-full shadow-sm" />
+                )}
+                <div className={`p-2 rounded-xl transition-colors ${mod.active ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400'}`}>
+                   <mod.icon size={16} />
+                </div>
+                <div>
+                  <div className={`text-xs font-bold transition-colors ${mod.active ? 'text-blue-950' : 'text-slate-700'}`}>{mod.title}</div>
+                  <div className={`text-[10px] transition-colors ${mod.active ? 'text-blue-700 font-medium' : 'text-slate-400'}`}>{mod.desc}</div>
+                </div>
               </div>
-              <p className="text-xs text-slate-500 pb-3 border-b border-slate-100 mb-3 font-medium">Engage target generation engines.</p>
-              
-              <div className="space-y-2 flex-1">
-                {[
-                  {
-                    id: 'tabular',
-                    title: 'Tabular Engine',
-                    desc: 'Generates localized rows & clean short IDs.',
-                    active: engineTabular,
-                    setter: setEngineTabular,
-                    icon: Database
-                  },
-                  {
-                    id: 'relational',
-                    title: 'Relational Engine',
-                    desc: 'Maintains 1:1, 1:N, N:M parent PKs.',
-                    active: engineRelational,
-                    setter: setEngineRelational,
-                    icon: TableIcon
-                  },
-                  {
-                    id: 'document',
-                    title: 'Document Engine',
-                    desc: 'Compiles Invoices, Statements & History docs.',
-                    active: engineDocument,
-                    setter: setEngineDocument,
-                    icon: FileText
-                  }
-                ].map((mod) => (
-                  <div 
-                    key={mod.id}
-                    onClick={() => { mod.setter(!mod.active); setCurrentStep(2); }}
-                    className={`relative flex items-center gap-3 p-3 cursor-pointer transition-all rounded-2xl border ${
-                      mod.active 
-                        ? 'bg-blue-50/60 border-blue-200 shadow-sm' 
-                        : 'bg-transparent border-transparent hover:bg-slate-50'
-                    }`}
-                  >
-                    {mod.active && (
-                      <div className="absolute left-0 top-2 bottom-2 w-1.5 bg-blue-600 rounded-r-full shadow-sm" />
-                    )}
-                    <div className={`p-2 rounded-xl transition-colors ${mod.active ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400'}`}>
-                       <mod.icon size={16} />
-                    </div>
-                    <div>
-                      <div className={`text-xs font-bold transition-colors ${mod.active ? 'text-blue-950' : 'text-slate-700'}`}>{mod.title}</div>
-                      <div className={`text-[10px] transition-colors ${mod.active ? 'text-blue-700 font-medium' : 'text-slate-400'}`}>{mod.desc}</div>
-                    </div>
-                  </div>
-                ))}
+            ))}
+          </div>
+          
+          {validationError && (
+              <div className="mt-4 text-xs font-bold text-rose-600 bg-rose-50 p-3 rounded-xl border border-rose-200 flex items-center gap-2">
+                  <AlertTriangle size={14} className="shrink-0" /> {validationError}
               </div>
-              
-              {validationError && (
-                  <div className="mt-4 text-xs font-bold text-rose-600 bg-rose-50 p-3 rounded-xl border border-rose-200 flex items-center gap-2">
-                      <AlertTriangle size={14} className="shrink-0" /> {validationError}
-                  </div>
-              )}
-            </div>
+          )}
+        </div>
 
-            {/* Locale Picker */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4 hover:shadow-md transition-all">
-              <div className="flex items-center gap-2 mb-1">
-                <Globe size={18} className="text-indigo-600" />
-                <h2 className="font-extrabold text-slate-900 text-xs tracking-wide uppercase">2. Locale Configuration</h2>
-              </div>
-              <p className="text-xs text-slate-500 pb-2 border-b border-slate-100 font-medium">Influences names, addresses, currency &amp; narrative languages.</p>
-              <div className="grid grid-cols-1 gap-2 max-h-52 overflow-y-auto pr-1">
-                {LOCALES.map(l => (
-                  <button
-                    key={l.code}
-                    onClick={() => { setLocale(l.code); setCurrentStep(2); }}
-                    className={`text-left px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all flex justify-between items-center ${
-                      locale === l.code
-                        ? 'border-indigo-500 bg-indigo-50/80 text-indigo-900 shadow-sm ring-1 ring-indigo-200'
-                        : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="truncate">{l.label}</div>
-                    <div className="text-[10px] font-mono font-bold bg-white border border-slate-200 px-1.5 py-0.5 rounded">{l.currency}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+        {/* Locale Picker */}
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4 hover:shadow-md transition-all">
+          <div className="flex items-center gap-2 mb-1">
+            <Globe size={18} className="text-indigo-600" />
+            <h2 className="font-extrabold text-slate-900 text-xs tracking-wide uppercase">2. Locale Configuration</h2>
+          </div>
+          <p className="text-xs text-slate-500 pb-2 border-b border-slate-100 font-medium">Influences names, addresses, currency &amp; narrative languages.</p>
+          <div className="grid grid-cols-1 gap-2 max-h-52 overflow-y-auto pr-1">
+            {LOCALES.map(l => (
+              <button
+                key={l.code}
+                onClick={() => { setLocale(l.code); setCurrentStep(2); }}
+                className={`text-left px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all flex justify-between items-center ${
+                  locale === l.code
+                    ? 'border-indigo-500 bg-indigo-50/80 text-indigo-900 shadow-sm ring-1 ring-indigo-200'
+                    : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <div className="truncate">{l.label}</div>
+                <div className="text-[10px] font-mono font-bold bg-white border border-slate-200 px-1.5 py-0.5 rounded">{l.currency}</div>
+              </button>
+            ))}
+          </div>
+        </div>
 
-            {/* Scenario Config */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-5 hover:shadow-md transition-all">
-              <div className="flex items-center gap-2 mb-1">
-                <Sliders size={18} className="text-purple-600" />
-                <h2 className="font-extrabold text-slate-900 text-xs tracking-wide uppercase">3. Edge Case Lab</h2>
+        {/* Scenario Config */}
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-5 hover:shadow-md transition-all">
+          <div className="flex items-center gap-2 mb-1">
+            <Sliders size={18} className="text-purple-600" />
+            <h2 className="font-extrabold text-slate-900 text-xs tracking-wide uppercase">3. Edge Case Lab</h2>
+          </div>
+          <p className="text-xs text-slate-500 pb-2 border-b border-slate-100 font-medium">Inject realistic data imperfections for stress-testing.</p>
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-bold">
+                <label className="text-slate-700">Missing Value (Null) Rate</label>
+                <span className="text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100">{nullRate}%</span>
               </div>
-              <p className="text-xs text-slate-500 pb-2 border-b border-slate-100 font-medium">Inject realistic data imperfections for stress-testing.</p>
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold">
-                    <label className="text-slate-700">Missing Value (Null) Rate</label>
-                    <span className="text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100">{nullRate}%</span>
-                  </div>
-                  <input
-                    type="range" min={0} max={30} step={1} value={nullRate}
-                    onChange={(e) => { setNullRate(Number(e.target.value)); setCurrentStep(2); }}
-                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold">
-                    <label className="text-slate-700">Anomaly / Outlier Rate</label>
-                    <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">{outlierRate}%</span>
-                  </div>
-                  <input
-                    type="range" min={0} max={10} step={0.5} value={outlierRate}
-                    onChange={(e) => { setOutlierRate(Number(e.target.value)); setCurrentStep(2); }}
-                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold">
-                    <label className="text-slate-700">Exact Duplicate Injection</label>
-                    <span className="text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">{duplicateRate}%</span>
-                  </div>
-                  <input
-                    type="range" min={0} max={10} step={0.5} value={duplicateRate}
-                    onChange={(e) => { setDuplicateRate(Number(e.target.value)); setCurrentStep(2); }}
-                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-rose-600"
-                  />
-                </div>
+              <input
+                type="range" min={0} max={30} step={1} value={nullRate}
+                onChange={(e) => { setNullRate(Number(e.target.value)); setCurrentStep(2); }}
+                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-bold">
+                <label className="text-slate-700">Anomaly / Outlier Rate</label>
+                <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">{outlierRate}%</span>
               </div>
+              <input
+                type="range" min={0} max={10} step={0.5} value={outlierRate}
+                onChange={(e) => { setOutlierRate(Number(e.target.value)); setCurrentStep(2); }}
+                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-bold">
+                <label className="text-slate-700">Exact Duplicate Injection</label>
+                <span className="text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">{duplicateRate}%</span>
+              </div>
+              <input
+                type="range" min={0} max={10} step={0.5} value={duplicateRate}
+                onChange={(e) => { setDuplicateRate(Number(e.target.value)); setCurrentStep(2); }}
+                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-rose-600"
+              />
             </div>
           </div>
+        </div>
+      </div>
+
+      {schema && (
+        <div className="animate-in space-y-6">
+
 
           {/* Schema Preview with editable row counts */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-7 shadow-sm hover:shadow-md transition-all">
