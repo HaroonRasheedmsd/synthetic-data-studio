@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Download, Loader2, ArrowLeft, Table as TableIcon, CheckCircle, ShieldCheck, CheckCircle2, ChevronRight, Check, FileText, Sliders, Eye, FileCheck, Landmark, Receipt, Sparkles, BookOpen, Layers, Zap } from 'lucide-react';
+import { Download, Loader2, ArrowLeft, Table as TableIcon, CheckCircle, ShieldCheck, CheckCircle2, ChevronRight, Check, FileText, Sliders, Eye, FileCheck, Landmark, Receipt, Sparkles, BookOpen, Layers, Zap, Upload } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import JSZip from 'jszip';
 import { API_BASE_URL } from '../utils/api';
@@ -51,6 +51,10 @@ export default function DataPreview({ activeTab = "all" }) {
 
   const [displayLimits, setDisplayLimits] = useState({});
   const [docFilter, setDocFilter] = useState("all");
+  
+  const [currentPlan, setCurrentPlan] = useState(null);
+  const [expandingEngine, setExpandingEngine] = useState(false);
+  const [uploadingCSV, setUploadingCSV] = useState(false);
 
   useEffect(() => {
     const savedSchema = localStorage.getItem("synthdata_schema");
@@ -61,6 +65,7 @@ export default function DataPreview({ activeTab = "all" }) {
     }
     try {
       const parsed = JSON.parse(savedSchema);
+      setCurrentPlan(parsed);
       const cacheKey = "synthdata_cache_" + savedSchema.length + "_" + JSON.stringify(parsed.tables?.map(t => [t.name, t.row_count]));
       const cached = sessionStorage.getItem(cacheKey);
       if (cached) {
@@ -78,6 +83,67 @@ export default function DataPreview({ activeTab = "all" }) {
       setLoading(false);
     }
   }, []);
+
+  const handleEnableEngine = async (engineType) => {
+    setExpandingEngine(true);
+    setLoading(true);
+    try {
+      const savedSchema = localStorage.getItem("synthdata_schema");
+      if (!savedSchema) return;
+      const plan = JSON.parse(savedSchema);
+      
+      if (!plan.engines) plan.engines = { tabular: true, relational: false, document: false };
+      
+      if (engineType === 'relational' || engineType === 'all') {
+        plan.engines.relational = true;
+      }
+      if (engineType === 'document' || engineType === 'all') {
+        plan.engines.document = true;
+      }
+      if (engineType === 'all') {
+        plan.engines.tabular = true;
+      }
+
+      localStorage.setItem("synthdata_schema", JSON.stringify(plan));
+      setCurrentPlan(plan);
+      
+      const newCacheKey = "synthdata_cache_" + JSON.stringify(plan).length + "_" + Date.now();
+      await generateData(plan, newCacheKey);
+    } catch (e) {
+      console.error("Error expanding engine", e);
+    } finally {
+      setExpandingEngine(false);
+      setLoading(false);
+    }
+  };
+
+  const handleImportCSV = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingCSV(true);
+    setLoading(true);
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${API_BASE_URL}/api/schema/infer-csv`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const plan = await res.json();
+      plan.engines = { tabular: true, relational: true, document: true };
+      localStorage.setItem("synthdata_schema", JSON.stringify(plan));
+      setCurrentPlan(plan);
+      const newCacheKey = "synthdata_cache_" + JSON.stringify(plan).length + "_" + Date.now();
+      await generateData(plan, newCacheKey);
+    } catch (err) {
+      setError(`CSV Expansion Error: ${err.message}`);
+    } finally {
+      setUploadingCSV(false);
+      setLoading(false);
+    }
+  };
 
   const generateData = async (plan, cacheKey) => {
     try {
@@ -250,15 +316,85 @@ export default function DataPreview({ activeTab = "all" }) {
               <h1 className="text-3xl font-black tracking-tight text-slate-900 mb-1">Validated Environment</h1>
               <p className="text-slate-500 text-sm font-medium">Your relational dataset, documents, and privacy report are ready for preview.</p>
             </div>
-            <button 
-              onClick={downloadZipBundle}
-              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold transition-all flex items-center gap-2.5 shadow-lg shadow-blue-500/25 hover:-translate-y-0.5"
-            >
-              <Download size={18} /> Download Bundle (.ZIP)
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="px-5 py-3 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 text-slate-700 font-bold text-sm transition-all flex items-center gap-2 cursor-pointer shadow-sm hover:shadow">
+                {uploadingCSV ? <Loader2 size={18} className="animate-spin text-blue-600" /> : <Upload size={18} className="text-blue-600" />}
+                <span>Import CSV to Build Relational &amp; Docs</span>
+                <input 
+                  type="file" 
+                  accept=".csv" 
+                  onChange={handleImportCSV} 
+                  className="hidden" 
+                  disabled={uploadingCSV}
+                />
+              </label>
+              <button 
+                onClick={downloadZipBundle}
+                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold transition-all flex items-center gap-2.5 shadow-lg shadow-blue-500/25 hover:-translate-y-0.5"
+              >
+                <Download size={18} /> Download Bundle (.ZIP)
+              </button>
+            </div>
           </div>
 
           <WorkflowStepper currentStep={4} onStepClick={() => navigate('/build')} />
+
+          {/* PROMINENT HIGHLIGHTED MULTIMODAL EXPANSION BANNER */}
+          {(!currentPlan?.engines?.relational || !currentPlan?.engines?.document || invoices.length === 0) && (
+            <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-purple-950 border-2 border-blue-500/50 rounded-3xl p-7 shadow-xl text-white relative overflow-hidden animate-in">
+              {/* Ambient Glow */}
+              <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/15 rounded-full blur-3xl pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+              <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                <div className="space-y-2 max-w-2xl">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-black border border-blue-400/30 uppercase tracking-wider">
+                    <Sparkles size={14} className="text-amber-400 animate-pulse" /> 
+                    Multimodal Dataset Expansion Prompt
+                  </div>
+                  <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                    Do you want to generate other types of data using the same prompt?
+                  </h3>
+                  <p className="text-slate-300 text-sm leading-relaxed font-medium">
+                    You currently have <strong>{tableEntries.length} Tabular Table(s)</strong> generated. Instantly expand this environment into full parent-child relational database graphs, synthetic invoices, bank statements, or multi-lingual narrative documents without re-typing!
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 shrink-0">
+                  {!currentPlan?.engines?.relational && (
+                    <button
+                      disabled={expandingEngine}
+                      onClick={() => handleEnableEngine('relational')}
+                      className="px-4.5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-blue-500/25 flex items-center gap-2 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                    >
+                      {expandingEngine ? <Loader2 size={16} className="animate-spin" /> : <Layers size={16} />} 
+                      Generate Relational Graph
+                    </button>
+                  )}
+
+                  {(!currentPlan?.engines?.document || invoices.length === 0) && (
+                    <button
+                      disabled={expandingEngine}
+                      onClick={() => handleEnableEngine('document')}
+                      className="px-4.5 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-purple-500/25 flex items-center gap-2 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                    >
+                      {expandingEngine ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />} 
+                      Generate Synthetic Documents
+                    </button>
+                  )}
+
+                  <button
+                    disabled={expandingEngine}
+                    onClick={() => handleEnableEngine('all')}
+                    className="px-4.5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-2xl shadow-lg shadow-emerald-500/30 flex items-center gap-2 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                  >
+                    {expandingEngine ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />} 
+                    Enable All Engines Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
 

@@ -232,7 +232,7 @@ export default function SchemaBuilder() {
           <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">— OR —</span>
           <label className="cursor-pointer flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-slate-300 text-xs text-slate-600 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50/50 transition-all font-bold">
             {uploadLoading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
-            <span>Upload CSV to infer schema</span>
+            <span>Upload CSV to infer &amp; expand into Relational DB + Synthetic Documents</span>
             <input type="file" accept=".csv" className="hidden" onChange={handleCSVUpload} />
           </label>
         </div>

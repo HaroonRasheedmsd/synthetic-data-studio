@@ -22,7 +22,7 @@ def infer_schema(request: InferenceRequest):
 
 @router.post("/schema/infer-csv", response_model=GenerationPlan)
 async def infer_schema_from_csv(file: UploadFile = File(...)):
-    """Infer a GenerationPlan from an uploaded CSV file by analyzing its columns and data."""
+    """Infer a GenerationPlan from an uploaded CSV file, creating a full relational ecosystem and enabling document generation."""
     try:
         contents = await file.read()
         df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
@@ -38,12 +38,23 @@ async def infer_schema_from_csv(file: UploadFile = File(...)):
             else:
                 sample = str(df[col].dropna().iloc[0]) if len(df[col].dropna()) > 0 else "N/A"
                 col_info.append(f"{col} ({dtype}, sample: {sample})")
+        
+        table_base_name = file.filename.replace('.csv', '').replace(' ', '_').lower()
         description = (
-            f"A table named '{file.filename.replace('.csv', '')}' with {len(df)} rows and columns: "
-            + ", ".join(col_info)
-            + ". Infer a realistic GenerationPlan for this data structure."
+            f"Build a complete multi-relational database around an uploaded CSV table named '{table_base_name}' "
+            f"with {len(df)} sample rows and columns: {', '.join(col_info)}. "
+            f"Create the primary table '{table_base_name}' matching these columns, and ALSO generate 1 to 2 related parent/child "
+            f"relational tables connected via foreign key constraints (e.g. 1:N or N:M relationships). "
+            f"Also enable document generation for invoices and bank statements."
         )
         plan = ai_manager.infer_schema(description)
+        
+        # Ensure all engines are explicitly enabled on the generated plan
+        plan.engines = {
+            "tabular": True,
+            "relational": True,
+            "document": True
+        }
         return plan
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
