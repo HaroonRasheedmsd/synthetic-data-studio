@@ -308,10 +308,13 @@ export default function DataPreview({ activeTab = "all" }) {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 animate-in">
-        <div className="bg-rose-50 border border-rose-200 p-6 rounded-3xl max-w-xl text-center shadow-sm">
-          <p className="text-rose-700 text-base font-bold mb-4">{error}</p>
-          <Link to="/build" className="inline-flex px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors items-center gap-2 font-bold shadow-md">
-            <ArrowLeft size={16} /> Edit Generation Plan
+        <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-xl text-center shadow-2xl text-white space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto border border-indigo-500/30">
+            <AlertTriangle size={24} />
+          </div>
+          <p className="text-slate-200 text-sm font-semibold">{error}</p>
+          <Link to="/build" className="inline-flex px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white transition-all items-center gap-2 text-xs font-black shadow-lg shadow-blue-500/20">
+            <ArrowLeft size={16} /> Return to Schema Studio
           </Link>
         </div>
       </div>
@@ -319,6 +322,14 @@ export default function DataPreview({ activeTab = "all" }) {
   }
 
   const tableEntries = Object.entries(data || {});
+
+  // Separate Tabular Data vs Relational Data tables
+  let targetTableEntries = tableEntries;
+  if (activeTab === "datasets") {
+    targetTableEntries = tableEntries.map(([tName, rows]) => {
+      return [`flat_${tName}_dataset`, rows || []];
+    });
+  }
 
   // Determine which documents to render based on activeTab
   let displayedDocs = invoices;
@@ -761,12 +772,12 @@ export default function DataPreview({ activeTab = "all" }) {
           </div>
         </div>
 
-        {tableEntries.length === 0 ? (
+        {targetTableEntries.length === 0 ? (
           <div className="bg-white border border-slate-200/80 rounded-3xl p-10 text-center text-slate-500 font-medium">
-            No tabular datasets available. Enable Tabular Engine in generation plan.
+            No datasets available for this engine view.
           </div>
         ) : (
-          tableEntries.map(([tableName, rows]) => {
+          targetTableEntries.map(([tableName, rows]) => {
             const rowList = rows || [];
             const hasRows = rowList.length > 0;
             const headers = hasRows ? Object.keys(rowList[0]) : [];

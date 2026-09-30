@@ -112,12 +112,12 @@ function App() {
             <div>
               <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2 px-3">Synthetic Data Generators</div>
               <div className="space-y-1">
-                <NavLink to="/build" icon={Sparkles} title="AI Generator Studio" description="Intent & ER Builder" color="purple" />
-                <NavLink to="/datasets" icon={Table} title="Tabular Data" description="Deterministic rows" color="blue" />
-                <NavLink to="/scenarios" icon={Layers} title="Relational Graph" description="Parent-child 1:1, 1:N, N:M" color="indigo" />
+                <NavLink to="/build" icon={Sparkles} title="AI Generator Studio" description="Intent & ER Builder" color="indigo" />
+                <NavLink to="/datasets" icon={Table} title="Tabular Data" description="Flat independent tables" color="blue" />
+                <NavLink to="/scenarios" icon={Layers} title="Relational Graph" description="Connected DB & SQL Engine" color="indigo" />
                 <NavLink to="/invoices" icon={Receipt} title="Synthetic Invoice" description="Demo billing data" color="emerald" />
-                <NavLink to="/statements" icon={CreditCard} title="Synthetic Statement" description="Demo ledger data" color="amber" />
-                <NavLink to="/narratives" icon={BookOpen} title="Narrative Document" description="History & SOW reports" color="rose" />
+                <NavLink to="/statements" icon={CreditCard} title="Synthetic Statement" description="Demo ledger data" color="indigo" />
+                <NavLink to="/narratives" icon={BookOpen} title="Narrative Document" description="Multi-lingual reports" color="indigo" />
               </div>
             </div>
 
