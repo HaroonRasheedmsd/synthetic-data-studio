@@ -139,6 +139,50 @@ export default function SchemaBuilder() {
     });
   };
 
+  const handleAddTable = () => {
+    if (!schema) return;
+    const newIndex = schema.tables.length + 1;
+    const newTable = {
+      name: `custom_table_${newIndex}`,
+      row_count: 50,
+      columns: [
+        { name: "id", data_type: "uuid", is_primary_key: true, faker_provider: "short_id" },
+        { name: "title", data_type: "string", faker_provider: "word" },
+        { name: "created_at", data_type: "datetime", faker_provider: "date_time" }
+      ]
+    };
+    setSchema({ ...schema, tables: [...schema.tables, newTable] });
+  };
+
+  const handleRemoveTable = (tableIdx) => {
+    if (!schema || schema.tables.length <= 1) return;
+    const updatedTables = schema.tables.filter((_, idx) => idx !== tableIdx);
+    setSchema({ ...schema, tables: updatedTables });
+  };
+
+  const handleAddColumn = (tableIdx) => {
+    if (!schema) return;
+    const updatedTables = [...schema.tables];
+    const targetTable = { ...updatedTables[tableIdx] };
+    const colCount = targetTable.columns.length + 1;
+    targetTable.columns = [
+      ...targetTable.columns,
+      { name: `col_${colCount}`, data_type: "string", faker_provider: "word" }
+    ];
+    updatedTables[tableIdx] = targetTable;
+    setSchema({ ...schema, tables: updatedTables });
+  };
+
+  const handleRemoveColumn = (tableIdx, colIdx) => {
+    if (!schema) return;
+    const updatedTables = [...schema.tables];
+    const targetTable = { ...updatedTables[tableIdx] };
+    if (targetTable.columns.length <= 1) return;
+    targetTable.columns = targetTable.columns.filter((_, idx) => idx !== colIdx);
+    updatedTables[tableIdx] = targetTable;
+    setSchema({ ...schema, tables: updatedTables });
+  };
+
   const [validationError, setValidationError] = useState("");
 
   const handleGenerate = () => {
@@ -395,13 +439,20 @@ export default function SchemaBuilder() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <Layers size={20} className="text-blue-600" />
-                  <h2 className="font-extrabold text-slate-900 text-sm tracking-wide uppercase">4. Data Architecture &amp; ER Diagram</h2>
+                  <h2 className="font-extrabold text-slate-900 text-sm tracking-wide uppercase">4. Data Architecture &amp; Custom Table Builder</h2>
                 </div>
                 <p className="text-slate-500 text-xs font-medium mt-1">
                   {schema.tables.length} tables · {schema.tables.reduce((s, t) => s + t.row_count, 0).toLocaleString()} records planned
                 </p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleAddTable}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 shadow-xs"
+                >
+                  <Plus size={16} className="text-blue-600" />
+                  <span>+ Add Custom Table</span>
+                </button>
                 {validationError && (
                     <div className="text-xs font-bold text-rose-600 flex items-center gap-1.5">
                         <AlertTriangle size={16} /> {validationError}
@@ -409,7 +460,7 @@ export default function SchemaBuilder() {
                 )}
                 <button
                   onClick={handleGenerate}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3.5 rounded-2xl font-extrabold transition-all shadow-lg shadow-blue-500/25 flex items-center gap-2 hover:-translate-y-0.5"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-2xl font-extrabold transition-all shadow-lg shadow-blue-500/25 flex items-center gap-2 hover:-translate-y-0.5"
                 >
                   <span>Generate &amp; Validate</span>
                   <ArrowRight size={18} />
@@ -462,27 +513,59 @@ export default function SchemaBuilder() {
               {schema.tables.map((table, idx) => (
                 <div key={idx} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:border-blue-300 transition-colors">
                   <div className="bg-[#F8FAFC] px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-                    <h3 className="font-extrabold text-slate-900 text-xs">{table.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-extrabold text-slate-900 text-xs">{table.name}</h3>
+                      {schema.tables.length > 1 && (
+                        <button
+                          onClick={() => handleRemoveTable(idx)}
+                          title="Delete Table"
+                          className="text-slate-400 hover:text-rose-600 transition-colors p-1"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
                       <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Rows</label>
                       <input
                         type="number" min={1} max={10000} value={table.row_count}
                         onChange={(e) => updateRowCount(idx, e.target.value)}
-                        className="w-20 text-xs font-extrabold text-blue-700 bg-white border border-slate-300 rounded-lg px-2 py-1 text-right focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-sm"
+                        className="w-16 text-xs font-extrabold text-blue-700 bg-white border border-slate-300 rounded-lg px-2 py-1 text-right focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-sm"
                       />
                     </div>
                   </div>
+                  
                   <div className="p-3.5 space-y-2 max-h-64 overflow-y-auto font-mono text-xs">
                     {table.columns.map((col, cIdx) => (
                       <div key={cIdx} className="flex justify-between items-center border-b border-slate-50 pb-1.5 last:border-0 last:pb-0">
-                        <span className="font-semibold text-slate-800 flex items-center gap-1.5 truncate max-w-[150px]">
+                        <span className="font-semibold text-slate-800 flex items-center gap-1.5 truncate max-w-[130px]">
                           {col.name}
                           {col.is_primary_key && <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">PK</span>}
                           {col.is_foreign_key && <span className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">FK</span>}
                         </span>
-                        <span className="text-slate-400 text-[10px] truncate max-w-[80px] text-right" title={col.data_type}>{col.data_type}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-400 text-[10px] truncate max-w-[70px] text-right" title={col.data_type}>{col.data_type}</span>
+                          {table.columns.length > 1 && (
+                            <button
+                              onClick={() => handleRemoveColumn(idx, cIdx)}
+                              className="text-slate-300 hover:text-rose-500 transition-colors"
+                              title="Delete column"
+                            >
+                              <X size={12} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
+                  </div>
+
+                  <div className="bg-slate-50 px-3.5 py-2 border-t border-slate-100 text-right">
+                    <button
+                      onClick={() => handleAddColumn(idx)}
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center justify-end gap-1 ml-auto"
+                    >
+                      <Plus size={12} /> Add Column
+                    </button>
                   </div>
                 </div>
               ))}
