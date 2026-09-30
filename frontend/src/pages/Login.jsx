@@ -26,17 +26,24 @@ export default function Login({ setToken }) {
         body: formData,
       });
       
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || 'Login failed');
+      let data;
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(text.substring(0, 120) || `Server error (${res.status})`);
       }
       
-      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || 'Login failed');
+      }
+      
       localStorage.setItem('auth_token', data.access_token);
       setToken(data.access_token);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'An error occurred during login');
     } finally {
       setLoading(false);
     }

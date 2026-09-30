@@ -33,17 +33,24 @@ export default function Signup({ setToken }) {
         body: JSON.stringify({ full_name: fullName, email, password }),
       });
       
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || 'Signup failed');
+      let data;
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(text.substring(0, 120) || `Server error (${res.status})`);
       }
       
-      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || 'Signup failed');
+      }
+      
       localStorage.setItem('auth_token', data.access_token);
       setToken(data.access_token);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'An error occurred during signup');
     } finally {
       setLoading(false);
     }
