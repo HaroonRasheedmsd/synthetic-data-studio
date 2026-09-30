@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bot, Loader2, ArrowRight, Upload, Globe, Sliders, X, CheckCircle2, ChevronRight, Settings, AlertTriangle, Database, Table as TableIcon, FileText, Sparkles, Layers, ShieldCheck, Zap } from 'lucide-react';
+import { Bot, Loader2, ArrowRight, Upload, Globe, Sliders, X, CheckCircle2, ChevronRight, Settings, AlertTriangle, Database, Table as TableIcon, FileText, Sparkles, Layers, ShieldCheck, Zap, Plus } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PRESETS } from '../utils/presets';
 import { API_BASE_URL } from '../utils/api';
