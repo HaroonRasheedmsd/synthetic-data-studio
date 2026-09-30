@@ -56,6 +56,32 @@ export default function DataPreview({ activeTab = "all" }) {
   const [expandingEngine, setExpandingEngine] = useState(false);
   const [uploadingCSV, setUploadingCSV] = useState(false);
 
+  const [userQuery, setUserQuery] = useState("");
+  const [queryLoading, setQueryLoading] = useState(false);
+  const [queryResult, setQueryResult] = useState(null);
+  const [queryError, setQueryError] = useState("");
+
+  const handleRunQuery = async (overrideQuery) => {
+    const targetQuery = overrideQuery || userQuery;
+    if (!targetQuery || !targetQuery.trim()) return;
+    setQueryLoading(true);
+    setQueryError("");
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data, query: targetQuery }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const result = await res.json();
+      setQueryResult(result);
+    } catch (err) {
+      setQueryError(`Query execution error: ${err.message}`);
+    } finally {
+      setQueryLoading(false);
+    }
+  };
+
   useEffect(() => {
     const savedSchema = localStorage.getItem("synthdata_schema");
     if (!savedSchema) {
@@ -505,6 +531,133 @@ export default function DataPreview({ activeTab = "all" }) {
               ))}
             </div>
           </div>
+          {/* INTERACTIVE DUCKDB SQL / NATURAL LANGUAGE SEARCH ENGINE (MANDATORY REQUIREMENT) */}
+          <div className="bg-white border border-slate-200/80 rounded-3xl p-7 shadow-sm hover:shadow-md transition-all space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-100 text-blue-700 rounded-2xl">
+                  <Sparkles size={22} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">Interactive SQL &amp; AI Query Engine</h3>
+                  <p className="text-slate-500 text-xs font-medium">Search, filter, or execute complex DuckDB SQL queries against your generated relational tables</p>
+                </div>
+              </div>
+              <span className="px-3 py-1 bg-indigo-50 text-indigo-700 font-extrabold text-xs rounded-full border border-indigo-100 font-mono">
+                DuckDB In-Memory Engine
+              </span>
+            </div>
+
+            {/* Search Input Box */}
+            <div className="space-y-3">
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={userQuery}
+                    onChange={(e) => setUserQuery(e.target.value)}
+                    placeholder="Type SQL (e.g. SELECT * FROM users) or prompt (e.g. show top 5 orders)..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-sm font-semibold font-mono"
+                    onKeyDown={(e) => e.key === 'Enter' && handleRunQuery()}
+                  />
+                </div>
+                <button
+                  onClick={() => handleRunQuery()}
+                  disabled={queryLoading || !userQuery.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-7 py-3.5 rounded-2xl font-extrabold transition-all shadow-md shadow-blue-500/20 flex items-center gap-2 text-sm whitespace-nowrap"
+                >
+                  {queryLoading ? <Loader2 className="animate-spin" size={18} /> : <Eye size={18} />}
+                  <span>Run Query</span>
+                </button>
+              </div>
+
+              {/* Sample Query Pills */}
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Sample Queries:</span>
+                {tableEntries.slice(0, 3).map(([tName]) => (
+                  <button
+                    key={tName}
+                    onClick={() => {
+                      const q = `SELECT * FROM ${tName} LIMIT 5;`;
+                      setUserQuery(q);
+                      handleRunQuery(q);
+                    }}
+                    className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 font-mono font-bold transition-all border border-slate-200 text-[11px]"
+                  >
+                    SELECT * FROM {tName} LIMIT 5
+                  </button>
+                ))}
+                {tableEntries.length > 0 && (
+                  <button
+                    onClick={() => {
+                      const q = `SELECT COUNT(*) AS total_records FROM ${tableEntries[0][0]};`;
+                      setUserQuery(q);
+                      handleRunQuery(q);
+                    }}
+                    className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 font-mono font-bold transition-all border border-slate-200 text-[11px]"
+                  >
+                    COUNT(*) total records
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Query Error Message */}
+            {queryError && (
+              <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl p-4 text-xs font-semibold">
+                {queryError}
+              </div>
+            )}
+
+            {/* Query Output & Result Table */}
+            {queryResult && (
+              <div className="bg-slate-900 rounded-2xl p-5 text-white space-y-4 shadow-inner border border-slate-800 animate-in">
+                <div className="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-md border border-emerald-800/60">
+                      ⚡ Executed SQL
+                    </span>
+                    <code className="text-xs font-mono text-slate-200 bg-slate-800 px-3 py-1 rounded-md">
+                      {queryResult.sql_executed}
+                    </code>
+                  </div>
+                  <span className="text-xs text-slate-400 font-medium">
+                    {queryResult.answer_summary}
+                  </span>
+                </div>
+
+                {/* Results Data Table */}
+                {queryResult.results && queryResult.results.length > 0 ? (
+                  <div className="overflow-x-auto max-h-[350px] border border-slate-800 rounded-xl">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-slate-800 text-slate-400 font-bold uppercase tracking-wider text-[10px] border-b border-slate-700 sticky top-0">
+                        <tr>
+                          {queryResult.columns?.map(col => (
+                            <th key={col} className="px-4 py-3 bg-slate-800">{col}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800 font-mono text-slate-300">
+                        {queryResult.results.map((row, rIdx) => (
+                          <tr key={rIdx} className="hover:bg-slate-800/60 transition-colors">
+                            {queryResult.columns?.map(col => (
+                              <td key={col} className="px-4 py-2.5 whitespace-nowrap">
+                                {row[col] === null ? <span className="text-slate-500 italic">NULL</span> : String(row[col])}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-slate-400 text-xs text-center py-4 font-mono">
+                    No rows returned by this query.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -542,7 +695,7 @@ export default function DataPreview({ activeTab = "all" }) {
       )}
 
       {/* Quality & Scenario Section */}
-      {(activeTab === 'all' || activeTab === 'quality' || activeTab === 'scenarios' || activeTab === 'exports') && (
+      {(activeTab === 'all' || activeTab === 'quality' || activeTab === 'exports') && (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white border border-slate-200/80 rounded-3xl p-7 shadow-sm hover:shadow-md transition-shadow">
           <h3 className="text-xs font-black text-slate-900 flex items-center gap-2 mb-6 uppercase tracking-wider">
@@ -596,13 +749,15 @@ export default function DataPreview({ activeTab = "all" }) {
       </div>
       )}
 
-      {/* Relational Datasets (Shown on 'all', 'datasets', 'scenarios', 'exports') */}
+      {/* Relational / Tabular Datasets (Shown on 'all', 'datasets', 'scenarios', 'exports') */}
       {(activeTab === 'all' || activeTab === 'datasets' || activeTab === 'scenarios' || activeTab === 'exports') && (
       <div className="space-y-6 pt-4">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-blue-100 text-blue-700 rounded-xl"><TableIcon size={20} /></div>
-            <h3 className="text-xl font-black text-slate-900">Relational Datasets</h3>
+            <h3 className="text-xl font-black text-slate-900">
+              {activeTab === 'datasets' ? 'Tabular Datasets' : activeTab === 'scenarios' ? 'Relational Database Tables & FK Links' : 'Synthetic Data Tables'}
+            </h3>
           </div>
         </div>
 

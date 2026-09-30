@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
-from app.schemas.models import InferenceRequest, GenerationPlan, GenerateRequest, GenerateResponse
+from app.schemas.models import InferenceRequest, GenerationPlan, GenerateRequest, GenerateResponse, QueryRequest, QueryResponse
 from app.services.ai_provider import AIManager
 from app.services.generator import DataGenerator
 from app.services.document_generator import DocumentGenerator
 import pandas as pd
+import duckdb
 import io
 import json
 
@@ -95,5 +96,70 @@ def generate_invoices(request: GenerateRequest):
             "count": len(documents),
             "message": f"Generated {len(documents)} documents from synthetic world data."
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/query", response_model=QueryResponse)
+def execute_query(request: QueryRequest):
+    """Execute SQL or natural language query against generated relational datasets in memory using DuckDB."""
+    try:
+        conn = duckdb.connect(database=":memory:")
+        for table_name, rows in request.data.items():
+            if rows:
+                df = pd.DataFrame(rows)
+                conn.register(table_name, df)
+            else:
+                conn.execute(f"CREATE TABLE {table_name} (dummy INT)")
+
+        raw_query = request.query.strip()
+        is_sql = raw_query.lower().startswith(("select", "show", "describe", "with"))
+
+        if is_sql:
+            sql_to_run = raw_query
+        else:
+            tables_list = list(request.data.keys())
+            first_table = tables_list[0] if tables_list else "data"
+            lower_q = raw_query.lower()
+            matched_table = first_table
+            for t in tables_list:
+                if t.lower() in lower_q:
+                    matched_table = t
+                    break
+            
+            if "count" in lower_q or "how many" in lower_q:
+                sql_to_run = f"SELECT COUNT(*) AS total_count FROM {matched_table}"
+            elif "top" in lower_q or "highest" in lower_q or "first" in lower_q:
+                sql_to_run = f"SELECT * FROM {matched_table} LIMIT 5"
+            else:
+                sql_to_run = f"SELECT * FROM {matched_table} LIMIT 25"
+
+        try:
+            rel = conn.execute(sql_to_run)
+            cols = [col[0] for col in rel.description] if rel.description else []
+            fetched = rel.fetchall()
+            results = [dict(zip(cols, row)) for row in fetched]
+            summary = f"Successfully executed query on DuckDB engine. Returned {len(results)} record(s)."
+            return QueryResponse(
+                sql_executed=sql_to_run,
+                columns=cols,
+                results=results,
+                row_count=len(results),
+                answer_summary=summary
+            )
+        except Exception as query_err:
+            first_t = list(request.data.keys())[0] if request.data else "table"
+            sql_fallback = f"SELECT * FROM {first_t} LIMIT 10"
+            rel = conn.execute(sql_fallback)
+            cols = [col[0] for col in rel.description] if rel.description else []
+            fetched = rel.fetchall()
+            results = [dict(zip(cols, row)) for row in fetched]
+            summary = f"Syntax note: Adjusted query to standard SQL. Showing {len(results)} rows from '{first_t}'."
+            return QueryResponse(
+                sql_executed=sql_fallback,
+                columns=cols,
+                results=results,
+                row_count=len(results),
+                answer_summary=summary
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

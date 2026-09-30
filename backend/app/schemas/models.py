@@ -98,3 +98,19 @@ class GenerateResponse(BaseModel):
     privacy_report: PrivacyReport
     message: str = "Generated successfully"
 
+class QueryRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    data: Dict[str, List[Dict[str, Any]]]
+    query: str
+
+class QueryResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    sql_executed: str
+    columns: List[str]
+    results: List[Dict[str, Any]]
+    row_count: int
+    answer_summary: str
+
+
