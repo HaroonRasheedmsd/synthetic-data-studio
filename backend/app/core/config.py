@@ -16,9 +16,14 @@ class Settings(BaseSettings):
     # The connection string for our database (SQLite for now)
     DATABASE_URL: str = "sqlite:///./sql_app.db"
     
-    # We must explicitly list the API keys here so Pydantic knows about them!
+    # API keys for AI model rotation
+    GEMINI_API_KEYS: str = ""
+    GEMINI_API_KEY: str = ""
     GEMINI_API_KEY_1: str = ""
     GEMINI_API_KEY_2: str = ""
+    GEMINI_API_KEY_3: str = ""
+    GEMINI_API_KEY_4: str = ""
+    GEMINI_API_KEY_5: str = ""
 
     # extra="ignore" tells Pydantic not to crash if it finds other variables in the .env file
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

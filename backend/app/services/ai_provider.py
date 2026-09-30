@@ -7,11 +7,38 @@ import time
 class AIManager:
     def __init__(self):
         self.model = None
-        self.keys = [settings.GEMINI_API_KEY_1, settings.GEMINI_API_KEY_2]
+        self.keys = self._collect_keys()
         self.current_key_idx = 0
         self._init_model()
 
+    def _collect_keys(self) -> list[str]:
+        keys = []
+        # 1. Comma-separated list if provided
+        if hasattr(settings, "GEMINI_API_KEYS") and settings.GEMINI_API_KEYS:
+            keys.extend([k.strip() for k in settings.GEMINI_API_KEYS.split(",") if k.strip()])
+        
+        # 2. Key 1 through 10
+        for i in range(1, 10):
+            attr_name = f"GEMINI_API_KEY_{i}"
+            val = getattr(settings, attr_name, "")
+            if val and val.strip():
+                keys.append(val.strip())
+                
+        # 3. Standard GEMINI_API_KEY
+        if hasattr(settings, "GEMINI_API_KEY") and settings.GEMINI_API_KEY:
+            keys.append(settings.GEMINI_API_KEY.strip())
+            
+        # Deduplicate while preserving order
+        seen = set()
+        deduped = []
+        for k in keys:
+            if k not in seen:
+                seen.add(k)
+                deduped.append(k)
+        return deduped
+
     def _init_model(self):
+        self.keys = self._collect_keys()
         valid_keys = [k for k in self.keys if k and k.strip()]
         if not valid_keys:
             return
