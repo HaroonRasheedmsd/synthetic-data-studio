@@ -15,6 +15,7 @@ data_generator = DataGenerator()
 document_generator = DocumentGenerator()
 
 @router.post("/schema/infer", response_model=GenerationPlan)
+@router.post("/schema/infer/", response_model=GenerationPlan)
 def infer_schema(request: InferenceRequest):
     try:
         return ai_manager.infer_schema(request.description)
@@ -22,6 +23,7 @@ def infer_schema(request: InferenceRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/schema/infer-csv", response_model=GenerationPlan)
+@router.post("/schema/infer-csv/", response_model=GenerationPlan)
 async def infer_schema_from_csv(file: UploadFile = File(...)):
     """Infer a GenerationPlan from an uploaded CSV file, creating a full relational ecosystem and enabling document generation."""
     try:
@@ -61,6 +63,7 @@ async def infer_schema_from_csv(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/generate", response_model=GenerateResponse)
+@router.post("/generate/", response_model=GenerateResponse)
 def generate_data(request: GenerateRequest):
     try:
         data, quality, privacy = data_generator.generate_world(request.plan)
@@ -69,6 +72,7 @@ def generate_data(request: GenerateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/export/csv/{table_name}")
+@router.get("/export/csv/{table_name}/")
 def export_table_csv(table_name: str, data: str):
     """Download a specific table as a CSV file. Pass data as JSON string query param."""
     try:
@@ -86,6 +90,7 @@ def export_table_csv(table_name: str, data: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/documents/invoices")
+@router.post("/documents/invoices/")
 def generate_invoices(request: GenerateRequest):
     """Generate HTML documents from the synthetic world data."""
     try:
