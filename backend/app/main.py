@@ -39,10 +39,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router)
-app.include_router(projects_router)
+from fastapi.responses import JSONResponse
+
+# Dual-prefix router registration for zero-friction serverless & local routing
+app.include_router(auth_router, prefix="/api/auth")
+app.include_router(auth_router, prefix="/auth")
+
+app.include_router(projects_router, prefix="/api/projects")
+app.include_router(projects_router, prefix="/projects")
+
 app.include_router(api_router, prefix="/api")
 app.include_router(api_router)
+
+@app.exception_handler(404)
+async def custom_404_handler(request, exc):
+    path = request.url.path
+    print(f"404 ROUTE NOT FOUND: Method={request.method}, Path={path}")
+    return JSONResponse(
+        status_code=404,
+        content={"detail": f"Route not found: {request.method} {path}"}
+    )
 
 @app.get("/health")
 def health_check():

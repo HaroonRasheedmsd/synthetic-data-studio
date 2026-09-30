@@ -6,7 +6,7 @@ from ..db.database import get_db, Project
 from .auth import get_current_user, User
 import json
 
-router = APIRouter(prefix="/api/projects", tags=["projects"])
+router = APIRouter(tags=["projects"])
 
 class ProjectCreate(BaseModel):
     name: str
