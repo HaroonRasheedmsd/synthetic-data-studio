@@ -6,9 +6,21 @@ from sqlalchemy.pool import StaticPool
 from datetime import datetime
 
 # Determine database location based on environment & filesystem permissions
-if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or not os.access(".", os.W_OK):
+# IMPORTANT: On Vercel (serverless), /tmp is ephemeral — wiped between cold starts.
+# ALL user data is lost on cold starts unless a persistent DATABASE_URL is provided.
+# To fix: set DATABASE_URL=postgresql://... in Vercel project environment variables.
+_env_db_url = os.environ.get("DATABASE_URL", "")
+if _env_db_url and not _env_db_url.startswith("sqlite"):
+    # Persistent database provided (e.g. PostgreSQL on Neon/Supabase/Railway)
+    SQLALCHEMY_DATABASE_URL = _env_db_url
+elif os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or not os.access(".", os.W_OK):
     tmp_path = os.path.join(tempfile.gettempdir(), "synthetic_studio.db")
-    SQLALCHEMY_DATABASE_URL = f"sqlite:///{tmp_path.replace('\\', '/')}"
+    SQLALCHEMY_DATABASE_URL = f"sqlite:///{tmp_path.replace(chr(92), '/')}"
+    print(
+        "WARNING: Running on Vercel/Lambda with ephemeral SQLite in /tmp. "
+        "User data WILL be lost on cold starts. "
+        "Set DATABASE_URL to a persistent PostgreSQL URL in Vercel env vars to fix this."
+    )
 else:
     SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./synthetic_studio.db")
 

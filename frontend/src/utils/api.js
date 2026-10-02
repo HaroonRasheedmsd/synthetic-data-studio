@@ -12,7 +12,8 @@ export const getApiBaseUrl = () => {
     }
     return `http://${hostname}:8000`;
   }
-  return 'http://127.0.0.1:8000';
+  // Default to relative URLs (safe for any production deployment)
+  return '';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
