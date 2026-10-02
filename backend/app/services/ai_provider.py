@@ -1,4 +1,5 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types as genai_types
 from app.core.config import settings
 from app.schemas.models import GenerationPlan, TableSchema, ColumnSchema
 import json
@@ -6,10 +7,11 @@ import time
 
 class AIManager:
     def __init__(self):
-        self.model = None
+        self.client = None
+        self.model_name = "gemini-2.0-flash"
         self.keys = self._collect_keys()
         self.current_key_idx = 0
-        self._init_model()
+        self._init_client()
 
     def _collect_keys(self) -> list[str]:
         keys = []
@@ -37,26 +39,17 @@ class AIManager:
                 deduped.append(k)
         return deduped
 
-    def _init_model(self):
+    def _init_client(self):
         self.keys = self._collect_keys()
         valid_keys = [k for k in self.keys if k and k.strip()]
         if not valid_keys:
             return
+        idx = self.current_key_idx % len(valid_keys)
+        try:
+            self.client = genai.Client(api_key=valid_keys[idx])
+        except Exception:
+            self.client = None
 
-        # Start from the current key and try all
-        for i in range(len(valid_keys)):
-            idx = (self.current_key_idx + i) % len(valid_keys)
-            try:
-                genai.configure(api_key=valid_keys[idx])
-                available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-                if available_models:
-                    flash_models = [m for m in available_models if 'flash' in m.lower()]
-                    model_name = flash_models[0] if flash_models else available_models[0]
-                    self.model = genai.GenerativeModel(model_name)
-                    self.current_key_idx = idx
-                    return
-            except Exception as e:
-                continue
 
     def _get_fallback_plan(self) -> GenerationPlan:
         # Fallback e-commerce schema to keep the hackathon demo alive if AI totally fails
@@ -75,10 +68,10 @@ class AIManager:
         )
 
     def infer_schema(self, description: str) -> GenerationPlan:
-        if not self.model:
-            self._init_model()
+        if not self.client:
+            self._init_client()
             
-        if not self.model:
+        if not self.client:
             # If we don't even have a valid key, return the fallback immediately
             return self._get_fallback_plan()
             
@@ -109,9 +102,12 @@ class AIManager:
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=genai.GenerationConfig(response_mime_type="application/json")
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(
+                        response_mime_type="application/json"
+                    )
                 )
                 text = response.text.strip()
                 if text.startswith("```json"):
@@ -129,10 +125,10 @@ class AIManager:
                     
             except Exception as e:
                 error_str = str(e)
-                if "429" in error_str or "Quota" in error_str:
-                    # Switch to the next key and wait a moment
-                    self.current_key_idx = (self.current_key_idx + 1) % len(self.keys)
-                    self._init_model()
+                if "429" in error_str or "Quota" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                    # Rotate to next API key
+                    self.current_key_idx = (self.current_key_idx + 1) % max(len(self.keys), 1)
+                    self._init_client()
                     time.sleep(2)
                     continue
                 else:
@@ -142,3 +138,4 @@ class AIManager:
         
         print("All API retries exhausted. Returning fallback schema.")
         return self._get_fallback_plan()
+

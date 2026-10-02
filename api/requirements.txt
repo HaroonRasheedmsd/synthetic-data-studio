@@ -7,7 +7,7 @@ duckdb
 pandas
 faker
 python-dotenv
-google-generativeai
+google-genai
 python-multipart
 passlib[bcrypt]
 python-jose[cryptography]

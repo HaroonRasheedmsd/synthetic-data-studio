@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "build": "cd frontend && npm install && npm run build",
-    "vercel-build": "cd frontend && npm install && npm run build"
+    "vercel-build": "cd frontend && npm install && npm run build",
+    "frontend": "cd frontend && npm run dev",
+    "backend": "cd backend && python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
   }
 }
