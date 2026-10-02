@@ -28,13 +28,15 @@ raw_origins.extend([
     "http://127.0.0.1:5174",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://synthetic-data-studio-chi.vercel.app",
 ])
 allowed_origins = list(set(raw_origins))
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r".*",
+    # Covers all Vercel preview URLs and any custom domains
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,6 +53,7 @@ app.include_router(api_router)
 
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.get("/health")
+@app.get("/api/health")
 def health_check():
     return {"status": "online", "message": "Synthetic Data Studio API is running."}
 
